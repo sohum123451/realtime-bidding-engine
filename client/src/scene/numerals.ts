@@ -78,6 +78,9 @@ export class OdometerDisplay {
     this.numeralGlowLight = new THREE.PointLight(0xffdf80, 2.0, 5, 1.2);
     this.numeralGlowLight.position.set(0, 0, 0.8);
     this.group.add(this.numeralGlowLight);
+
+    // Initialize with starter value so it is never an empty box
+    this.setValue(5000, true);
   }
 
   private createCharMesh(char: string): THREE.Group {

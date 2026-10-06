@@ -33,6 +33,11 @@
         </div>
 
         <div class="top-controls">
+          <div class="view-btn-group">
+            <button id="view-saleroom-btn" class="ctrl-btn view-btn active" title="Saleroom View">🏛️ Saleroom</button>
+            <button id="view-stage-btn" class="ctrl-btn view-btn" title="Stage & Lot View">🎯 Stage</button>
+            <button id="view-bidders-btn" class="ctrl-btn view-btn" title="Bidders View">🙋 Bidders</button>
+          </div>
           <div class="connection-status" id="connection-pill">
             <span class="status-dot"></span>
             <span class="status-label" id="status-label">CONNECTED</span>
@@ -120,12 +125,18 @@
       <aside id="activity-panel">
         <div class="panel-header">
           <h2>TRANSACTION LOG</h2>
-          <span class="gapless-badge">GAPLESS SEQ</span>
+          <div class="panel-header-actions">
+            <span class="gapless-badge">GAPLESS SEQ</span>
+            <button id="toggle-feed-btn" class="toggle-feed-btn" title="Toggle log panel">✕</button>
+          </div>
         </div>
         <div id="event-feed" class="event-feed">
           <!-- Live events streamed here -->
         </div>
       </aside>
+
+      <!-- Floating button to reopen log if closed -->
+      <button id="open-feed-btn" class="open-feed-btn hidden" title="Open Transaction Log">📋 Log</button>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

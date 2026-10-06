@@ -124,7 +124,22 @@ function updateSubmitButtonLabel() {
 }
 
 // 6. Append Feed Item
+function renderEmptyFeedHint() {
+  if (eventFeedEl.children.length === 0) {
+    eventFeedEl.innerHTML = `
+      <div class="feed-empty-hint">
+        <div class="feed-empty-icon">🏛️</div>
+        <h4>Saleroom Awaiting Bids</h4>
+        <p>Select a VIP bidder below and place a bid to see paddles raise and gavels strike!</p>
+      </div>
+    `;
+  }
+}
+
 function addFeedItem(type: string, seq: number, title: string, amountCents?: number, extra?: string) {
+  const emptyHint = eventFeedEl.querySelector('.feed-empty-hint');
+  if (emptyHint) emptyHint.remove();
+
   const item = document.createElement('div');
   item.className = `feed-item ${type}`;
 
@@ -202,6 +217,7 @@ network = new AuctionNetworkClient({
         }
       }
     }
+    renderEmptyFeedHint();
   },
 
   onEvent: (ev) => {
@@ -287,8 +303,9 @@ network = new AuctionNetworkClient({
 
 // 8. Bootstrap Auction Connection
 async function bootstrap() {
-  await fetchBidderTokens();
   renderSeatButtons();
+  renderEmptyFeedHint();
+  await fetchBidderTokens();
 
   try {
     const res = await fetch('/auctions');
@@ -362,6 +379,25 @@ document.querySelectorAll('.btn-inc').forEach((btn) => {
   });
 });
 
+// Camera View Presets
+function setActiveViewBtn(btnId: string) {
+  document.querySelectorAll('.view-btn').forEach((b) => b.classList.remove('active'));
+  document.getElementById(btnId)?.classList.add('active');
+}
+
+document.getElementById('view-saleroom-btn')?.addEventListener('click', () => {
+  scene.setCameraView('saleroom');
+  setActiveViewBtn('view-saleroom-btn');
+});
+document.getElementById('view-stage-btn')?.addEventListener('click', () => {
+  scene.setCameraView('stage');
+  setActiveViewBtn('view-stage-btn');
+});
+document.getElementById('view-bidders-btn')?.addEventListener('click', () => {
+  scene.setCameraView('bidders');
+  setActiveViewBtn('view-bidders-btn');
+});
+
 // Camera motion toggle
 toggleMotionBtn.addEventListener('click', () => {
   const isOrbiting = scene.toggleMotion();
@@ -371,6 +407,21 @@ toggleMotionBtn.addEventListener('click', () => {
 // Chaos drop simulation
 chaosTriggerBtn.addEventListener('click', () => {
   network.simulateDrop();
+});
+
+// Transaction log panel collapse/expand
+const activityPanel = document.getElementById('activity-panel');
+const toggleFeedBtn = document.getElementById('toggle-feed-btn');
+const openFeedBtn = document.getElementById('open-feed-btn');
+
+toggleFeedBtn?.addEventListener('click', () => {
+  activityPanel?.classList.add('collapsed');
+  openFeedBtn?.classList.remove('hidden');
+});
+
+openFeedBtn?.addEventListener('click', () => {
+  activityPanel?.classList.remove('collapsed');
+  openFeedBtn?.classList.add('hidden');
 });
 
 // 10. Animation Loop

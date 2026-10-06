@@ -1,18 +1,16 @@
 import * as THREE from 'three';
 
-// 7-segment coordinates for clean mechanical 3D extruded numerals
-// Box dimensions per segment: width, height, x, y
+// Refined segment definitions with thicker, beveled proportions
 const SEGMENTS: Record<string, [number, number, number, number]> = {
-  a: [1.2, 0.22, 0, 1.4],     // top
-  b: [0.22, 1.1, 0.65, 0.8],  // top-right
-  c: [0.22, 1.1, 0.65, -0.6], // bottom-right
-  d: [1.2, 0.22, 0, -1.2],    // bottom
-  e: [0.22, 1.1, -0.65, -0.6],// bottom-left
-  f: [0.22, 1.1, -0.65, 0.8], // top-left
-  g: [1.2, 0.22, 0, 0.1],     // middle
+  a: [1.35, 0.28, 0, 1.3],     // top
+  b: [0.28, 1.15, 0.65, 0.72], // top-right
+  c: [0.28, 1.15, 0.65, -0.62],// bottom-right
+  d: [1.35, 0.28, 0, -1.2],    // bottom
+  e: [0.28, 1.15, -0.65, -0.62],// bottom-left
+  f: [0.28, 1.15, -0.65, 0.72],// top-left
+  g: [1.35, 0.28, 0, 0.05],    // middle
 };
 
-// Which segments are active for each digit 0-9
 const DIGIT_MAP: Record<string, string[]> = {
   '0': ['a', 'b', 'c', 'd', 'e', 'f'],
   '1': ['b', 'c'],
@@ -31,32 +29,68 @@ export class OdometerDisplay {
   private currentCents = 0;
   private currentDisplayGroup: THREE.Group | null = null;
   private rollingOutGroup: THREE.Group | null = null;
-  private rollProgress = 1; // 1 = settled, < 1 = in animation
+  private rollProgress = 1;
   private goldMaterial: THREE.MeshStandardMaterial;
+  private plateMaterial: THREE.MeshStandardMaterial;
+  private brassMaterial: THREE.MeshStandardMaterial;
+  private plateMesh: THREE.Mesh;
+  private numeralGlowLight: THREE.PointLight;
 
   constructor() {
     this.group = new THREE.Group();
+
+    // High-specular luxury gold material
     this.goldMaterial = new THREE.MeshStandardMaterial({
-      color: 0xe2b043,
-      metalness: 0.85,
-      roughness: 0.25,
-      emissive: 0x5a3e10,
-      emissiveIntensity: 0.35,
+      color: 0xffd700,
+      metalness: 0.92,
+      roughness: 0.15,
+      emissive: 0xd4a017,
+      emissiveIntensity: 0.55,
     });
+
+    // Dark brushed bronze backplate
+    this.plateMaterial = new THREE.MeshStandardMaterial({
+      color: 0x14100c,
+      metalness: 0.8,
+      roughness: 0.35,
+    });
+
+    // Antique brass framing
+    this.brassMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc89d42,
+      metalness: 0.9,
+      roughness: 0.25,
+    });
+
+    // Mounting display backplate
+    const plateGeom = new THREE.BoxGeometry(6.4, 2.2, 0.15);
+    this.plateMesh = new THREE.Mesh(plateGeom, this.plateMaterial);
+    this.plateMesh.position.z = -0.15;
+    this.group.add(this.plateMesh);
+
+    // Brass frame trim
+    const frameGeom = new THREE.BoxGeometry(6.55, 2.35, 0.1);
+    const frameMesh = new THREE.Mesh(frameGeom, this.brassMaterial);
+    frameMesh.position.z = -0.22;
+    this.group.add(frameMesh);
+
+    // Dedicated warm glow pointlight illuminating numerals
+    this.numeralGlowLight = new THREE.PointLight(0xffdf80, 2.0, 5, 1.2);
+    this.numeralGlowLight.position.set(0, 0, 0.8);
+    this.group.add(this.numeralGlowLight);
   }
 
   private createCharMesh(char: string): THREE.Group {
     const charGroup = new THREE.Group();
 
     if (char === '$') {
-      // Create dollar symbol mesh: vertical bar + 5 segments
-      const vGeom = new THREE.BoxGeometry(0.18, 3.2, 0.3);
+      const vGeom = new THREE.BoxGeometry(0.24, 3.0, 0.35);
       const vMesh = new THREE.Mesh(vGeom, this.goldMaterial);
       charGroup.add(vMesh);
 
       for (const seg of ['a', 'f', 'g', 'c', 'd']) {
         const [w, h, x, y] = SEGMENTS[seg];
-        const g = new THREE.BoxGeometry(w, h, 0.25);
+        const g = new THREE.BoxGeometry(w, h, 0.32);
         const m = new THREE.Mesh(g, this.goldMaterial);
         m.position.set(x, y, 0);
         charGroup.add(m);
@@ -65,17 +99,17 @@ export class OdometerDisplay {
     }
 
     if (char === '.') {
-      const dotGeom = new THREE.BoxGeometry(0.3, 0.3, 0.25);
+      const dotGeom = new THREE.BoxGeometry(0.35, 0.35, 0.35);
       const dotMesh = new THREE.Mesh(dotGeom, this.goldMaterial);
-      dotMesh.position.set(0, -1.1, 0);
+      dotMesh.position.set(0, -1.05, 0);
       charGroup.add(dotMesh);
       return charGroup;
     }
 
     if (char === ',') {
-      const dotGeom = new THREE.BoxGeometry(0.25, 0.45, 0.25);
+      const dotGeom = new THREE.BoxGeometry(0.3, 0.5, 0.35);
       const dotMesh = new THREE.Mesh(dotGeom, this.goldMaterial);
-      dotMesh.position.set(0, -1.3, 0);
+      dotMesh.position.set(0, -1.2, 0);
       dotMesh.rotation.z = -0.3;
       charGroup.add(dotMesh);
       return charGroup;
@@ -84,7 +118,7 @@ export class OdometerDisplay {
     const segKeys = DIGIT_MAP[char] || [];
     for (const seg of segKeys) {
       const [w, h, x, y] = SEGMENTS[seg];
-      const geom = new THREE.BoxGeometry(w, h, 0.25);
+      const geom = new THREE.BoxGeometry(w, h, 0.32);
       const mesh = new THREE.Mesh(geom, this.goldMaterial);
       mesh.position.set(x, y, 0);
       charGroup.add(mesh);
@@ -101,7 +135,7 @@ export class OdometerDisplay {
     });
     const text = `$${dollars}`;
 
-    const spacing = 1.9;
+    const spacing = 1.95;
     const totalWidth = text.length * spacing;
     let startX = -totalWidth / 2 + spacing / 2;
 
@@ -118,8 +152,11 @@ export class OdometerDisplay {
       }
     }
 
-    // Scale overall group to fit aesthetically above pedestal
-    container.scale.set(0.45, 0.45, 0.45);
+    // Adapt backplate width dynamically
+    const requiredWidth = Math.max(5.8, (totalWidth + 1.2) * 0.48);
+    this.plateMesh.scale.x = requiredWidth / 6.4;
+
+    container.scale.set(0.48, 0.48, 0.48);
     return container;
   }
 
@@ -134,41 +171,41 @@ export class OdometerDisplay {
         this.group.remove(this.currentDisplayGroup);
       }
       this.currentDisplayGroup = newGroup;
-      this.currentDisplayGroup.position.set(0, 0, 0);
+      this.currentDisplayGroup.position.set(0, 0, 0.05);
       this.currentDisplayGroup.rotation.x = 0;
       this.group.add(this.currentDisplayGroup);
       this.rollProgress = 1;
       return;
     }
 
-    // Odometer roll animation:
-    // Move existing group out, roll new group in
+    // Odometer roll animation
     if (this.rollingOutGroup) {
       this.group.remove(this.rollingOutGroup);
     }
     this.rollingOutGroup = this.currentDisplayGroup;
     this.currentDisplayGroup = newGroup;
 
-    // Start incoming group above with downward rotation
-    this.currentDisplayGroup.position.y = 1.6;
+    this.currentDisplayGroup.position.set(0, 1.8, 0.05);
     this.currentDisplayGroup.rotation.x = Math.PI / 2;
     this.group.add(this.currentDisplayGroup);
 
     this.rollProgress = 0;
+
+    // Flash light during roll
+    this.numeralGlowLight.intensity = 4.0;
   }
 
   public update(delta: number): void {
     if (this.rollProgress < 1) {
-      // Animate odometer roll smoothly
-      this.rollProgress += delta * 3.5;
+      this.rollProgress += delta * 4.2;
       if (this.rollProgress > 1) this.rollProgress = 1;
 
-      // Ease out cubic
+      // Elastic/cubic ease
       const t = 1 - Math.pow(1 - this.rollProgress, 3);
 
       if (this.rollingOutGroup) {
-        this.rollingOutGroup.position.y = -1.6 * t;
-        this.rollingOutGroup.rotation.x = -Math.PI / 2 * t;
+        this.rollingOutGroup.position.y = -1.8 * t;
+        this.rollingOutGroup.rotation.x = (-Math.PI / 2) * t;
         if (this.rollProgress >= 1) {
           this.group.remove(this.rollingOutGroup);
           this.rollingOutGroup = null;
@@ -176,19 +213,29 @@ export class OdometerDisplay {
       }
 
       if (this.currentDisplayGroup) {
-        this.currentDisplayGroup.position.y = 1.6 * (1 - t);
+        this.currentDisplayGroup.position.y = 1.8 * (1 - t);
         this.currentDisplayGroup.rotation.x = (Math.PI / 2) * (1 - t);
       }
+
+      this.numeralGlowLight.intensity = THREE.MathUtils.lerp(
+        this.numeralGlowLight.intensity,
+        2.0,
+        delta * 5
+      );
     }
   }
 
   public setDimState(dimmed: boolean): void {
     if (dimmed) {
-      this.goldMaterial.emissive.setHex(0x221105);
+      this.goldMaterial.emissive.setHex(0x331a00);
       this.goldMaterial.color.setHex(0x735520);
+      this.numeralGlowLight.intensity = 0.4;
+      this.numeralGlowLight.color.setHex(0xb36b00);
     } else {
-      this.goldMaterial.emissive.setHex(0x5a3e10);
-      this.goldMaterial.color.setHex(0xe2b043);
+      this.goldMaterial.emissive.setHex(0xd4a017);
+      this.goldMaterial.color.setHex(0xffd700);
+      this.numeralGlowLight.intensity = 2.0;
+      this.numeralGlowLight.color.setHex(0xffdf80);
     }
   }
 }

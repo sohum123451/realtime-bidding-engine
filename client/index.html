@@ -7,36 +7,46 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <!-- 3D Canvas Viewport -->
+    <!-- 3D Canvas Viewport (Drag to orbit, scroll to zoom) -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay (Minimal, non-intrusive plain HTML) -->
+    <!-- UI Overlay -->
     <div id="overlay">
-      <!-- Top Header -->
+      <!-- Top Bar -->
       <header id="top-bar">
         <div class="lot-meta">
-          <span class="badge" id="auction-status">LIVE LOT</span>
+          <div class="badge-row">
+            <span class="badge" id="auction-status">LIVE LOT</span>
+            <span class="seq-badge" id="seq-counter">SEQ #0</span>
+          </div>
           <h1 id="lot-title">Lot #101: 18th-Century Celestial Orrery</h1>
           <div class="sub-meta">
             <span id="auction-id-display">ID: ...</span>
-            <span class="sep">•</span>
-            <span id="seq-counter">SEQ #0</span>
+            <span class="hint-orbit">• Drag in 3D to rotate room • Scroll to zoom</span>
           </div>
         </div>
 
-        <div class="connection-status" id="connection-pill">
-          <span class="status-dot"></span>
-          <span class="status-label" id="status-label">CONNECTED</span>
+        <div class="top-controls">
+          <div class="connection-status" id="connection-pill">
+            <span class="status-dot"></span>
+            <span class="status-label" id="status-label">CONNECTED</span>
+          </div>
+          <button id="toggle-motion-btn" class="ctrl-btn" title="Toggle automatic camera rotation">
+            Motion: Auto
+          </button>
+          <button id="chaos-trigger-btn" class="ctrl-btn drop-btn" title="Test diegetic reconnect state">
+            Simulate Drop
+          </button>
         </div>
       </header>
 
-      <!-- Diegetic Reconnection Banner (Displayed when socket drops) -->
+      <!-- Diegetic Reconnection Banner -->
       <div id="reconnect-banner" class="hidden">
         <div class="reconnect-content">
           <div class="spinner"></div>
@@ -47,48 +57,60 @@
         </div>
       </div>
 
-      <!-- In-Scene 3D Feed Notification Overlay (for rejected bids, extensions) -->
+      <!-- In-Scene 3D Feed Notification Overlay -->
       <div id="toast-container"></div>
 
-      <!-- Bottom Control Panel: Bidder Seat & Bidding Controls -->
-      <div id="bottom-bar">
-        <div class="panel-card bidder-selector-card">
-          <div class="card-label">YOUR BIDDER SEAT</div>
-          <div class="seats-row" id="seat-buttons">
+      <!-- Bottom Command Dock: Bidder Seat & Bidding Controls -->
+      <div id="bottom-dock">
+        <!-- Bidder Seat Selector Card -->
+        <div class="dock-card seats-card">
+          <div class="card-header">
+            <span class="card-title">BIDDER SEATS</span>
+            <span class="card-subtitle">Click to switch identity</span>
+          </div>
+          <div class="seats-grid" id="seat-buttons">
             <!-- Populated dynamically: Alice, Bob, Claire, etc. -->
           </div>
         </div>
 
-        <div class="panel-card bidding-action-card">
-          <div class="bidding-header">
-            <span class="card-label">BID PROPOSAL</span>
-            <span class="min-bid-hint" id="min-bid-hint">Min increment: $1.00</span>
+        <!-- Bidding Action Card -->
+        <div class="dock-card bidding-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-title">BID PROPOSAL</span>
+              <span class="active-bidder-name" id="active-bidder-label">Bidding as: Alice (Seat 1)</span>
+            </div>
+            <span class="min-bid-hint" id="min-bid-hint">Min increment: +$5.00</span>
           </div>
 
           <form id="bid-form" class="bid-form" onsubmit="return false;">
-            <div class="input-group">
-              <span class="currency-symbol">$</span>
-              <input
-                type="number"
-                id="bid-amount-input"
-                name="bid_amount"
-                step="1"
-                min="1"
-                placeholder="0"
-                required
-                autocomplete="off"
-              />
+            <div class="bid-inputs-row">
+              <div class="input-wrapper">
+                <span class="currency-symbol">$</span>
+                <input
+                  type="number"
+                  id="bid-amount-input"
+                  name="bid_amount"
+                  step="1"
+                  min="1"
+                  placeholder="0"
+                  required
+                  autocomplete="off"
+                />
+              </div>
+
+              <div class="quick-increment-group">
+                <button type="button" class="btn-inc" data-add="1">+$1</button>
+                <button type="button" class="btn-inc" data-add="5">+$5</button>
+                <button type="button" class="btn-inc" data-add="10">+$10</button>
+                <button type="button" class="btn-inc" data-add="25">+$25</button>
+                <button type="button" class="btn-inc" data-add="50">+$50</button>
+              </div>
             </div>
 
-            <div class="quick-buttons">
-              <button type="button" class="btn-quick" data-add="1">+$1</button>
-              <button type="button" class="btn-quick" data-add="5">+$5</button>
-              <button type="button" class="btn-quick" data-add="10">+$10</button>
-              <button type="button" class="btn-quick" data-add="25">+$25</button>
-            </div>
-
-            <button type="submit" id="btn-submit-bid" class="btn-submit">
-              PLACE BID
+            <button type="submit" id="btn-submit-bid" class="btn-submit-glow">
+              <span class="btn-submit-text" id="submit-button-text">PLACE BID ($0.00)</span>
+              <span class="btn-submit-arrow">➔</span>
             </button>
           </form>
         </div>
@@ -104,16 +126,6 @@
           <!-- Live events streamed here -->
         </div>
       </aside>
-
-      <!-- Motion & Camera Control Button -->
-      <div id="camera-controls">
-        <button id="toggle-motion-btn" title="Toggle orbit animation">
-          Motion: Auto
-        </button>
-        <button id="chaos-trigger-btn" title="Simulate socket disconnect">
-          Simulate Drop
-        </button>
-      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

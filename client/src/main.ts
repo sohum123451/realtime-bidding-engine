@@ -24,15 +24,25 @@ const reconnectBannerEl = document.getElementById('reconnect-banner')!;
 const reconnectSeqInfoEl = document.getElementById('reconnect-seq-info')!;
 const toastContainerEl = document.getElementById('toast-container')!;
 const seatButtonsContainer = document.getElementById('seat-buttons')!;
+const activeBidderLabelEl = document.getElementById('active-bidder-label')!;
 const minBidHintEl = document.getElementById('min-bid-hint')!;
 const bidAmountInput = document.getElementById('bid-amount-input') as HTMLInputElement;
 const btnSubmitBid = document.getElementById('btn-submit-bid') as HTMLButtonElement;
+const submitButtonTextEl = document.getElementById('submit-button-text')!;
 const eventFeedEl = document.getElementById('event-feed')!;
 const toggleMotionBtn = document.getElementById('toggle-motion-btn')!;
 const chaosTriggerBtn = document.getElementById('chaos-trigger-btn')!;
 
 // 1. Initialize 3D Scene
 scene = new AuctionRoomScene(canvasContainer);
+
+// 3D Scene interaction: clicking a bidder station selects that seat!
+scene.onSeatClicked = (seatIndex: number) => {
+  if (BIDDER_SEATS[seatIndex]) {
+    selectBidder(BIDDER_SEATS[seatIndex]);
+    showToast(`Switched seat to ${BIDDER_SEATS[seatIndex].name}`, 'info');
+  }
+};
 
 // 2. Fetch Bidder Tokens from Backend
 async function fetchBidderTokens() {
@@ -57,7 +67,7 @@ function renderSeatButtons() {
     btn.type = 'button';
     btn.className = `seat-btn ${seat.id === activeBidder.id ? 'active' : ''}`;
     btn.innerHTML = `
-      <span class="seat-pip" style="background: ${seat.color}; box-shadow: 0 0 6px ${seat.color}"></span>
+      <span class="seat-pip" style="background: ${seat.color}; box-shadow: 0 0 8px ${seat.color}"></span>
       <span>${seat.name}</span>
     `;
     btn.onclick = () => {
@@ -65,6 +75,9 @@ function renderSeatButtons() {
     };
     seatButtonsContainer.appendChild(btn);
   }
+  activeBidderLabelEl.textContent = `Bidding as: ${activeBidder.name}`;
+  activeBidderLabelEl.style.color = activeBidder.color;
+  scene.setActiveSeat(activeBidder.seatIndex);
 }
 
 function selectBidder(seat: typeof BIDDER_SEATS[0]) {
@@ -83,16 +96,28 @@ function showToast(message: string, type: 'info' | 'rejected' | 'extended' = 'in
   toastContainerEl.appendChild(toast);
   setTimeout(() => {
     toast.remove();
-  }, 3200);
+  }, 3500);
 }
 
-// 5. Update Bid Hint and Input
+// 5. Update Bid Hint and Dynamic Button Label
 function updateBidHint() {
   const minRequiredCents = currentPriceCents + minIncrementCents;
   const minDollars = (minRequiredCents / 100).toFixed(2);
   minBidHintEl.textContent = `Min bid: $${minDollars} (+$${(minIncrementCents / 100).toFixed(2)})`;
-  if (!bidAmountInput.value || Number(bidAmountInput.value) * 100 < minRequiredCents) {
+
+  const curVal = parseFloat(bidAmountInput.value);
+  if (isNaN(curVal) || curVal * 100 < minRequiredCents) {
     bidAmountInput.value = Math.ceil(minRequiredCents / 100).toString();
+  }
+  updateSubmitButtonLabel();
+}
+
+function updateSubmitButtonLabel() {
+  const val = parseFloat(bidAmountInput.value);
+  if (!isNaN(val) && val > 0) {
+    submitButtonTextEl.textContent = `PLACE BID ($${val.toFixed(2)})`;
+  } else {
+    submitButtonTextEl.textContent = `PLACE BID`;
   }
 }
 
@@ -112,7 +137,7 @@ function addFeedItem(type: string, seq: number, title: string, amountCents?: num
       <span class="feed-bidder">${title}</span>
       ${amountCents ? `<span class="feed-amount">$${(amountCents / 100).toFixed(2)}</span>` : ''}
     </div>
-    ${extra ? `<div style="font-size: 11px; color: var(--gold-accent);">${extra}</div>` : ''}
+    ${extra ? `<div style="font-size: 11px; color: var(--gold-bright); font-weight: 600;">${extra}</div>` : ''}
   `;
 
   eventFeedEl.insertBefore(item, eventFeedEl.firstChild);
@@ -247,7 +272,9 @@ network = new AuctionNetworkClient({
       // Race condition resolution: visually signal rejection to this bidder
       scene.triggerRejectedBidFeedback();
       const currentDollars = (result.current_price_cents / 100).toFixed(2);
-      showToast(`BID REJECTED: ${result.reject_reason?.toUpperCase()} (Price: $${currentDollars})`, 'rejected');
+      showToast(`BID REJECTED: ${result.reject_reason?.toUpperCase()} (Current: $${currentDollars})`, 'rejected');
+    } else {
+      showToast(`BID ACCEPTED: $${(result.amount_cents / 100).toFixed(2)}`, 'info');
     }
   },
 
@@ -266,12 +293,8 @@ async function bootstrap() {
     const data = await res.json();
     let targetAuction = data.auctions?.find((a: any) => a.status === 'open');
 
-    if (!targetAuction && data.auctions?.length > 0) {
-      targetAuction = data.auctions[0];
-    }
-
-    if (!targetAuction) {
-      // Create seed auction if none exists
+    // If no open auction exists, or it expires in less than 2 minutes, create a fresh live lot
+    if (!targetAuction || new Date(targetAuction.ends_at).getTime() - Date.now() < 120000) {
       const createRes = await fetch('/auctions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -279,7 +302,7 @@ async function bootstrap() {
           title: 'Lot #101: 18th-Century Celestial Orrery',
           starting_price_cents: 5000,
           min_increment_cents: 500,
-          ends_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          ends_at: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
         }),
       });
       const createData = await createRes.json();
@@ -294,8 +317,7 @@ async function bootstrap() {
 }
 
 // 9. Form Submission for Bids
-document.getElementById('bid-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function submitBid() {
   const dollars = parseFloat(bidAmountInput.value);
   if (isNaN(dollars) || dollars <= 0) return;
 
@@ -311,14 +333,24 @@ document.getElementById('bid-form')?.addEventListener('submit', async (e) => {
       btnSubmitBid.disabled = false;
     }
   }
+}
+
+document.getElementById('bid-form')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitBid();
+});
+
+bidAmountInput.addEventListener('input', () => {
+  updateSubmitButtonLabel();
 });
 
 // Quick increment buttons
-document.querySelectorAll('.btn-quick').forEach((btn) => {
+document.querySelectorAll('.btn-inc').forEach((btn) => {
   btn.addEventListener('click', () => {
     const add = parseInt(btn.getAttribute('data-add') || '0', 10);
     const cur = parseFloat(bidAmountInput.value) || Math.ceil((currentPriceCents + minIncrementCents) / 100);
     bidAmountInput.value = (cur + add).toString();
+    updateSubmitButtonLabel();
   });
 });
 
@@ -339,8 +371,8 @@ let lastFrameTime = performance.now();
 function updateCountdown() {
   if (!auctionEndsAt) return;
   const now = Date.now();
-  const diff = auctionEndsAt.getTime() - now;
-  scene.setCountdown(diff, 15 * 60 * 1000); // 15-minute scale
+  const diff = Math.max(0, auctionEndsAt.getTime() - now);
+  scene.setCountdown(diff, 25 * 60 * 1000); // 25-minute scale
 }
 
 function animate(now: number) {

@@ -101,13 +101,15 @@ function showToast(message: string, type: 'info' | 'rejected' | 'extended' = 'in
 
 // 5. Update Bid Hint and Dynamic Button Label
 function updateBidHint() {
-  const minRequiredCents = currentPriceCents + minIncrementCents;
-  const minDollars = (minRequiredCents / 100).toFixed(2);
-  minBidHintEl.textContent = `Min bid: $${minDollars} (+$${(minIncrementCents / 100).toFixed(2)})`;
+  const minThresholdCents = currentPriceCents + minIncrementCents;
+  // Must be strictly greater than (currentPrice + minIncrement)
+  const minValidDollars = Math.ceil((minThresholdCents + 1) / 100);
+
+  minBidHintEl.textContent = `Min valid bid: $${minValidDollars.toFixed(2)} (Increment: +$${(minIncrementCents / 100).toFixed(2)})`;
 
   const curVal = parseFloat(bidAmountInput.value);
-  if (isNaN(curVal) || curVal * 100 < minRequiredCents) {
-    bidAmountInput.value = Math.ceil(minRequiredCents / 100).toString();
+  if (isNaN(curVal) || curVal * 100 <= minThresholdCents) {
+    bidAmountInput.value = minValidDollars.toString();
   }
   updateSubmitButtonLabel();
 }
@@ -348,7 +350,13 @@ bidAmountInput.addEventListener('input', () => {
 document.querySelectorAll('.btn-inc').forEach((btn) => {
   btn.addEventListener('click', () => {
     const add = parseInt(btn.getAttribute('data-add') || '0', 10);
-    const cur = parseFloat(bidAmountInput.value) || Math.ceil((currentPriceCents + minIncrementCents) / 100);
+    const minThresholdCents = currentPriceCents + minIncrementCents;
+    const minValidDollars = Math.ceil((minThresholdCents + 1) / 100);
+
+    let cur = parseFloat(bidAmountInput.value);
+    if (isNaN(cur) || cur * 100 <= minThresholdCents) {
+      cur = minValidDollars;
+    }
     bidAmountInput.value = (cur + add).toString();
     updateSubmitButtonLabel();
   });

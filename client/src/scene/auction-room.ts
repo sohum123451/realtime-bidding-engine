@@ -157,7 +157,7 @@ export class AuctionRoomScene {
 
     // 8. 3D Odometer Numerals
     this.odometer = new OdometerDisplay();
-    this.odometer.group.position.set(0, 4.8, 0);
+    this.odometer.group.position.set(0, 5.3, 0);
     this.scene.add(this.odometer.group);
 
     // 9. Countdown Ring around pedestal
@@ -570,7 +570,7 @@ export class AuctionRoomScene {
 
     // 4. Update Numerals Odometer & Orient toward camera
     this.odometer.update(delta);
-    this.tempVec.set(this.camera.position.x, 4.8, this.camera.position.z);
+    this.tempVec.set(this.camera.position.x, 5.3, this.camera.position.z);
     this.odometer.group.lookAt(this.tempVec);
 
     // 5. Active Bid Shockwave Pulses

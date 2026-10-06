@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sotheby's &amp; Christie's Real-Time 3D Auction Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!-- 3D Canvas Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay (Minimal, non-intrusive plain HTML) -->
+    <div id="overlay">
+      <!-- Top Header -->
+      <header id="top-bar">
+        <div class="lot-meta">
+          <span class="badge" id="auction-status">LIVE LOT</span>
+          <h1 id="lot-title">Lot #101: 18th-Century Celestial Orrery</h1>
+          <div class="sub-meta">
+            <span id="auction-id-display">ID: ...</span>
+            <span class="sep">•</span>
+            <span id="seq-counter">SEQ #0</span>
+          </div>
+        </div>
+
+        <div class="connection-status" id="connection-pill">
+          <span class="status-dot"></span>
+          <span class="status-label" id="status-label">CONNECTED</span>
+        </div>
+      </header>
+
+      <!-- Diegetic Reconnection Banner (Displayed when socket drops) -->
+      <div id="reconnect-banner" class="hidden">
+        <div class="reconnect-content">
+          <div class="spinner"></div>
+          <div class="reconnect-text">
+            <h3>RECONNECTING TO AUCTION ROOM</h3>
+            <p id="reconnect-seq-info">Last observed state: Seq #0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- In-Scene 3D Feed Notification Overlay (for rejected bids, extensions) -->
+      <div id="toast-container"></div>
+
+      <!-- Bottom Control Panel: Bidder Seat & Bidding Controls -->
+      <div id="bottom-bar">
+        <div class="panel-card bidder-selector-card">
+          <div class="card-label">YOUR BIDDER SEAT</div>
+          <div class="seats-row" id="seat-buttons">
+            <!-- Populated dynamically: Alice, Bob, Claire, etc. -->
+          </div>
+        </div>
+
+        <div class="panel-card bidding-action-card">
+          <div class="bidding-header">
+            <span class="card-label">BID PROPOSAL</span>
+            <span class="min-bid-hint" id="min-bid-hint">Min increment: $1.00</span>
+          </div>
+
+          <form id="bid-form" class="bid-form" onsubmit="return false;">
+            <div class="input-group">
+              <span class="currency-symbol">$</span>
+              <input
+                type="number"
+                id="bid-amount-input"
+                name="bid_amount"
+                step="1"
+                min="1"
+                placeholder="0"
+                required
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="quick-buttons">
+              <button type="button" class="btn-quick" data-add="1">+$1</button>
+              <button type="button" class="btn-quick" data-add="5">+$5</button>
+              <button type="button" class="btn-quick" data-add="10">+$10</button>
+              <button type="button" class="btn-quick" data-add="25">+$25</button>
+            </div>
+
+            <button type="submit" id="btn-submit-bid" class="btn-submit">
+              PLACE BID
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right Activity Feed -->
+      <aside id="activity-panel">
+        <div class="panel-header">
+          <h2>TRANSACTION LOG</h2>
+          <span class="gapless-badge">GAPLESS SEQ</span>
+        </div>
+        <div id="event-feed" class="event-feed">
+          <!-- Live events streamed here -->
+        </div>
+      </aside>
+
+      <!-- Motion & Camera Control Button -->
+      <div id="camera-controls">
+        <button id="toggle-motion-btn" title="Toggle orbit animation">
+          Motion: Auto
+        </button>
+        <button id="chaos-trigger-btn" title="Simulate socket disconnect">
+          Simulate Drop
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

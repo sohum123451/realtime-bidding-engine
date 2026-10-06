@@ -12,7 +12,7 @@ export interface ServerOptions {
 }
 
 export async function startServer(options: ServerOptions = {}) {
-  const PORT = options.port ?? Number(process.env.PORT) ?? 3000;
+  const PORT = options.port ?? (process.env.PORT ? Number(process.env.PORT) : 3000);
   const HOST = options.host ?? process.env.HOST ?? '127.0.0.1';
   const closePool = options.closePoolOnShutdown ?? true;
 

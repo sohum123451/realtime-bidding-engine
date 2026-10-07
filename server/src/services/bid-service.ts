@@ -111,9 +111,6 @@ export async function placeBid(
       isExtended = true;
     }
 
-    // Note: If locking is disabled, seq calculation and price update happen without row lock
-    const nextSeq = Number(auction.seq) + 1;
-
     // Update auction
     const updateRes = await client.query(
       `UPDATE auctions

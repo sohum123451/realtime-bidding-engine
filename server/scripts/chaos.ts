@@ -66,7 +66,6 @@ export async function runChaos(numBots = 8, runDurationMs = 12000) {
 
   function connectBot(bot: ChaosBot): Promise<void> {
     return new Promise((resolve) => {
-      if (!running) return resolve();
       const ws = new WebSocket(`${WS_URL}?token=${bot.token}`);
       bot.socket = ws;
 
@@ -116,6 +115,7 @@ export async function runChaos(numBots = 8, runDurationMs = 12000) {
 
       ws.on('error', () => {
         bot.socket = null;
+        resolve();
       });
     });
   }
@@ -195,8 +195,7 @@ export async function runChaos(numBots = 8, runDurationMs = 12000) {
   for (const bot of bots) {
     if (!bot.socket || bot.socket.readyState !== WebSocket.OPEN) {
       await connectBot(bot);
-    }
-    if (bot.socket && bot.socket.readyState === WebSocket.OPEN) {
+    } else {
       bot.socket.send(
         JSON.stringify({
           type: 'sync',
@@ -207,7 +206,7 @@ export async function runChaos(numBots = 8, runDurationMs = 12000) {
     }
   }
 
-  await sleep(1500);
+  await sleep(2000);
 
   // Close all bot sockets
   for (const bot of bots) {

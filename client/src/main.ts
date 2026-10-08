@@ -236,6 +236,9 @@ function selectBidder(seat: BidderSeatConfig) {
       seat_index: seat.seatIndex,
     };
   } else {
+    currentUser.id = seat.id;
+    currentUser.username = seat.name.split(' ')[0];
+    currentUser.paddle_number = seat.paddleNumber;
     currentUser.seat_index = seat.seatIndex;
     currentUser.avatar_color = seat.color;
   }
@@ -275,20 +278,50 @@ function updateBidHint() {
   updateSubmitButtonLabel();
 }
 
+function isCurrentBidderWinning(): boolean {
+  if (!currentWinnerId && !currentWinnerName) return false;
+
+  const identifiers = [
+    activeBidder.id,
+    activeBidder.name,
+    activeBidder.name.split(' ')[0],
+    activeBidder.paddleNumber,
+    `#${activeBidder.paddleNumber}`,
+    currentUser?.id,
+    currentUser?.username,
+    currentUser?.paddle_number,
+    currentUser ? `#${currentUser.paddle_number}` : null,
+  ].filter(Boolean) as string[];
+
+  const leaderId = (currentWinnerId || '').toLowerCase().trim();
+  const leaderName = (currentWinnerName || '').toLowerCase().trim();
+
+  for (const ident of identifiers) {
+    const clean = ident.toLowerCase().trim();
+    if (!clean) continue;
+    if (leaderId === clean || leaderId.includes(clean)) return true;
+    if (leaderName === clean || leaderName.includes(clean)) return true;
+  }
+  return false;
+}
+
 function updateSubmitButtonLabel() {
-  const isWinning = Boolean(currentWinnerId && (
-    currentWinnerId === activeBidder.id ||
-    (currentUser && currentWinnerId === currentUser.id)
-  ));
+  const isWinning = isCurrentBidderWinning();
 
   if (isWinning) {
     btnSubmitBid.disabled = true;
     submitButtonTextEl.textContent = `👑 YOU HOLD HIGH BID ($${(currentPriceCents / 100).toFixed(2)})`;
     btnSubmitBid.classList.add('holding-bid');
     minBidHintEl.innerHTML = `<span style="color: var(--gold-bright); font-weight: 600;">✨ You currently lead the auction. Awaiting counter-bids...</span>`;
+    document.querySelectorAll('.btn-inc').forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = true;
+    });
   } else {
     btnSubmitBid.disabled = auctionStatus !== 'open';
     btnSubmitBid.classList.remove('holding-bid');
+    document.querySelectorAll('.btn-inc').forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = auctionStatus !== 'open';
+    });
     if (currentWinnerName) {
       minBidHintEl.innerHTML = `Leader: <strong style="color: var(--gold-bright);">${currentWinnerName}</strong> &bull; Next min: $${((currentPriceCents + minIncrementCents) / 100).toFixed(2)}`;
     }
@@ -462,6 +495,8 @@ network = new AuctionNetworkClient({
       seqCounterEl.textContent = `SEQ #${ev.seq}`;
       if (ev.type === 'bid_accepted') {
         currentPriceCents = Number(ev.payload.current_price_cents);
+        currentWinnerId = ev.payload.bidder_id || ev.payload.bidder_name;
+        currentWinnerName = ev.payload.bidder_name || ev.payload.bidder_id;
         scene.odometer.setValue(currentPriceCents);
         if (ev.payload.ends_at) {
           auctionEndsAt = new Date(ev.payload.ends_at);
@@ -564,12 +599,9 @@ async function bootstrap() {
 
 // 9. Form Submission for Bids
 async function submitBid() {
-  const isWinning = Boolean(currentWinnerId && (
-    currentWinnerId === activeBidder.id ||
-    (currentUser && currentWinnerId === currentUser.id)
-  ));
-  if (isWinning) {
+  if (isCurrentBidderWinning()) {
     showToast('You already hold the leading bid! Awaiting opponent counter-bids.', 'rejected');
+    updateSubmitButtonLabel();
     return;
   }
 
@@ -583,20 +615,21 @@ async function submitBid() {
   sounds.playPaddleRaise();
 
   try {
-    await network.placeBid(
+    const res = await network.placeBid(
       cents,
       activeBidder.name,
       activeBidder.paddleNumber,
       activeBidder.color,
       activeBidder.seatIndex
     );
+    if (!res.accepted && res.reject_reason === 'ALREADY_HIGHEST_BIDDER') {
+      showToast('You already hold the leading bid! Awaiting opponent counter-bids.', 'rejected');
+    }
   } catch (err: any) {
     sounds.playRejected();
     showToast(`BID FAILED: ${err.message}`, 'rejected');
   } finally {
-    if (auctionStatus === 'open') {
-      btnSubmitBid.disabled = false;
-    }
+    updateSubmitButtonLabel();
   }
 }
 
@@ -612,6 +645,10 @@ bidAmountInput.addEventListener('input', () => {
 // Quick increment buttons
 document.querySelectorAll('.btn-inc').forEach((btn) => {
   btn.addEventListener('click', () => {
+    if (isCurrentBidderWinning()) {
+      showToast('You already hold the leading bid! Awaiting opponent counter-bids.', 'rejected');
+      return;
+    }
     const add = parseFloat(btn.getAttribute('data-add') || '0');
     const minThresholdCents = currentPriceCents + minIncrementCents;
     const minValidDollars = minThresholdCents / 100;

@@ -552,6 +552,23 @@ body, html {
   box-shadow: none;
 }
 
+.btn-submit-glow.holding-bid,
+.btn-submit-glow.holding-bid:disabled {
+  background: linear-gradient(135deg, #2b2210 0%, #151009 100%) !important;
+  border: 1px solid #d4af37 !important;
+  color: #ffd700 !important;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.25) !important;
+  opacity: 0.95 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.btn-inc:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-submit-arrow {
   font-size: 16px;
   transition: transform 0.2s;

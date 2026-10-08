@@ -72,7 +72,10 @@ export async function placeBid(
       rejectReason = 'auction_ended';
     } else if (dbNow < startsAt) {
       rejectReason = 'auction_not_started';
-    } else if (auction.current_winner_id && auction.current_winner_id === bidderId) {
+    } else if (auction.current_winner_id && (
+      auction.current_winner_id === bidderId ||
+      auction.current_winner_id.toLowerCase() === bidderId.toLowerCase()
+    )) {
       rejectReason = 'already_highest_bidder';
     } else if (amountCents < currentPriceCents + minIncrementCents) {
       rejectReason = 'too_low';

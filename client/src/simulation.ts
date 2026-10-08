@@ -245,7 +245,23 @@ class SimulationEngine {
     const winningBidderId = bidderSeat.id;
 
     // Disallow overbidding oneself when already holding the high bid
-    if (this.activeAuction.current_winner_id === winningBidderId) {
+    const curWinId = (this.activeAuction.current_winner_id || '').toLowerCase().trim();
+    const curWinName = (this.activeAuction.current_winner_name || '').toLowerCase().trim();
+    const checkIdentifiers = [
+      winningBidderId,
+      bidderSeat.id,
+      winningBidderName,
+      bidderSeat.name,
+      bidderSeat.name.split(' ')[0],
+      bidderSeat.paddleNumber,
+      `#${bidderSeat.paddleNumber}`,
+    ].map((s) => s.toLowerCase().trim());
+
+    const isAlreadyWinning = checkIdentifiers.some(
+      (c) => c && (curWinId === c || curWinId.includes(c) || curWinName === c || curWinName.includes(c))
+    );
+
+    if (isAlreadyWinning) {
       const res: BidResult = {
         idempotency_key: idempotencyKey,
         accepted: false,
@@ -325,21 +341,30 @@ class SimulationEngine {
       return;
     }
 
-    // Pick a random seat between 1 and 5
-    const opponentSeatIdx = Math.floor(Math.random() * 5) + 1;
-    const opponentSeat = BIDDER_SEATS[opponentSeatIdx] || BIDDER_SEATS[1];
+    const curWinId = (this.activeAuction.current_winner_id || '').toLowerCase().trim();
+    const curWinName = (this.activeAuction.current_winner_name || '').toLowerCase().trim();
+
+    // Pick a random seat that is NOT currently holding the winning bid
+    const eligibleSeats = BIDDER_SEATS.filter((seat) => {
+      const sId = seat.id.toLowerCase().trim();
+      const sName = seat.name.toLowerCase().trim();
+      const sFirst = seat.name.split(' ')[0].toLowerCase().trim();
+      if (curWinId && (curWinId === sId || curWinId.includes(sFirst))) return false;
+      if (curWinName && (curWinName === sName || curWinName.includes(sFirst))) return false;
+      return true;
+    });
+
+    if (eligibleSeats.length === 0) return;
+    const opponentSeat = eligibleSeats[Math.floor(Math.random() * eligibleSeats.length)];
 
     const nextAmount = this.activeAuction.current_price_cents + this.activeAuction.min_increment_cents;
     this.currentSeq++;
     this.totalAcceptedBids++;
     this.activeAuction.current_price_cents = nextAmount;
+    this.activeAuction.current_winner_id = opponentSeat.id;
+    this.activeAuction.current_winner_name = opponentSeat.name;
 
-    const remainingMs = new Date(this.activeAuction.ends_at).getTime() - Date.now();
-    let extended = false;
-    if (remainingMs < 30000) {
-      this.activeAuction.ends_at = new Date(Date.now() + 45000).toISOString();
-      extended = true;
-    }
+    const extended = false;
 
     const eventPayload = {
       auction_id: this.activeAuction.id,

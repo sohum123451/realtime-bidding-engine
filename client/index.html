@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sotheby's &amp; Christie's Real-Time 3D Auction Room</title>
+    <title>SOHUM | Real-Time 3D Luxury Auction Saleroom</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -38,15 +38,38 @@
             <button id="view-stage-btn" class="ctrl-btn view-btn" title="Stage & Lot View">🎯 Stage</button>
             <button id="view-bidders-btn" class="ctrl-btn view-btn" title="Bidders View">🙋 Bidders</button>
           </div>
-          <div class="connection-status" id="connection-pill">
+
+          <div class="connection-status" id="connection-pill" style="cursor: pointer;" title="Click to view Connection & Server Configuration">
             <span class="status-dot"></span>
             <span class="status-label" id="status-label">CONNECTED</span>
           </div>
+
+          <button id="server-settings-btn" class="ctrl-btn server-btn" title="Configure AWS Backend / Standalone Demo">
+            🌐 Engine
+          </button>
+
+          <button id="toggle-sound-btn" class="ctrl-btn sound-btn" title="Toggle audio effects">
+            🔊 Sound: ON
+          </button>
+
           <button id="toggle-motion-btn" class="ctrl-btn" title="Toggle automatic camera rotation">
             Motion: Auto
           </button>
+
+          <!-- User Identity Pill -->
+          <div class="user-pill" id="user-pill" title="Click to open Sign In or VIP Switcher">
+            <span class="user-avatar-pip" id="user-avatar-pip"></span>
+            <span class="user-name-label" id="user-name-label">Alice (#01)</span>
+            <button id="auth-modal-btn" class="ctrl-btn auth-btn">👤 Account</button>
+          </div>
+
+          <!-- Curator / Admin Deck Button -->
+          <button id="admin-deck-btn" class="ctrl-btn admin-btn" title="Curator & Saleroom Master Deck">
+            🏛️ Curator Deck
+          </button>
+
           <button id="chaos-trigger-btn" class="ctrl-btn drop-btn" title="Test diegetic reconnect state">
-            Simulate Drop
+            Drop
           </button>
         </div>
       </header>
@@ -71,7 +94,7 @@
         <div class="dock-card seats-card">
           <div class="card-header">
             <span class="card-title">BIDDER SEATS</span>
-            <span class="card-subtitle">Click to switch identity</span>
+            <span class="card-subtitle">Click to switch VIP identity</span>
           </div>
           <div class="seats-grid" id="seat-buttons">
             <!-- Populated dynamically: Alice, Bob, Claire, etc. -->
@@ -137,6 +160,359 @@
 
       <!-- Floating button to reopen log if closed -->
       <button id="open-feed-btn" class="open-feed-btn hidden" title="Open Transaction Log">📋 Log</button>
+    </div>
+
+    <!-- MODAL 1: User Login & VIP Identity Registry -->
+    <div id="auth-modal" class="modal-backdrop hidden">
+      <div class="modal-card auth-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge">SALEROOM REGISTRY</span>
+            <h2 class="modal-title">VIP Bidder Admission &amp; Identity</h2>
+            <p class="modal-subtitle">Sohum's Fine Arts &amp; Antiquities Bidding Authentication</p>
+          </div>
+          <button id="auth-modal-close" class="modal-close-btn" title="Close">✕</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button id="tab-btn-quick" class="tab-btn active">⚡ VIP Quick Select</button>
+          <button id="tab-btn-login" class="tab-btn">🔑 Individual Login</button>
+          <button id="tab-btn-register" class="tab-btn">✍️ Register Account</button>
+        </div>
+
+        <!-- Tab 1: VIP Quick Select -->
+        <div id="tab-pane-quick" class="tab-pane active">
+          <p class="tab-desc">Switch seamlessly to an established VIP saleroom paddle or administrative station:</p>
+          <div class="quick-vip-grid" id="quick-vip-grid">
+            <!-- Populated dynamically: Alice, Bob, Claire, etc. -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Individual Login -->
+        <div id="tab-pane-login" class="tab-pane">
+          <form id="login-form" class="modal-form" onsubmit="return false;">
+            <div class="form-group">
+              <label for="login-identifier">Email or Saleroom Username</label>
+              <input
+                type="text"
+                id="login-identifier"
+                class="form-input"
+                placeholder="e.g. alice@saleroom.vip or Alice"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Master Key / Password</label>
+              <input
+                type="password"
+                id="login-password"
+                class="form-input"
+                placeholder="••••••••••••"
+                required
+              />
+            </div>
+            <div id="login-feedback" class="form-feedback hidden"></div>
+            <button type="submit" id="login-submit-btn" class="modal-submit-btn">
+              AUTHENTICATE CREDENTIALS ➔
+            </button>
+          </form>
+        </div>
+
+        <!-- Tab 3: Register -->
+        <div id="tab-pane-register" class="tab-pane">
+          <form id="register-form" class="modal-form" onsubmit="return false;">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reg-username">Bidder Alias / Name</label>
+                <input
+                  type="text"
+                  id="reg-username"
+                  class="form-input"
+                  placeholder="e.g. Lord Sterling"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="reg-paddle">Desired Paddle #</label>
+                <input
+                  type="text"
+                  id="reg-paddle"
+                  class="form-input"
+                  placeholder="e.g. 77"
+                  maxlength="4"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="reg-email">Private Registry Email</label>
+              <input
+                type="email"
+                id="reg-email"
+                class="form-input"
+                placeholder="collector@gallery.com"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-password">Secure Password</label>
+              <input
+                type="password"
+                id="reg-password"
+                class="form-input"
+                placeholder="Minimum 6 characters"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="reg-color">Paddle Seal Color</label>
+              <div class="color-picker-row">
+                <input type="color" id="reg-color" value="#d4af37" class="color-picker-input" />
+                <span class="color-picker-hint">Signature lacquer finish for 3D paddle badge</span>
+              </div>
+            </div>
+            <div id="register-feedback" class="form-feedback hidden"></div>
+            <button type="submit" id="register-submit-btn" class="modal-submit-btn">
+              ISSUE VIP PADDLE &amp; ENTER ➔
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Curator & Saleroom Admin Deck ("Which Item is Next" & Controls) -->
+    <div id="admin-modal" class="modal-backdrop hidden">
+      <div class="modal-card admin-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge admin-badge">CURATOR &amp; SALEROOM MASTER</span>
+            <h2 class="modal-title">Auction Block Orchestration Deck</h2>
+            <p class="modal-subtitle">Catalog Queue, Next Lot Designation, and Gavel Controls</p>
+          </div>
+          <button id="admin-modal-close" class="modal-close-btn" title="Close">✕</button>
+        </div>
+
+        <div class="modal-tabs admin-tabs">
+          <button id="admin-tab-stage" class="tab-btn active">🏛️ Live Block &amp; Up Next</button>
+          <button id="admin-tab-catalog" class="tab-btn">📋 Catalog &amp; Queue</button>
+          <button id="admin-tab-create" class="tab-btn">✨ Add New Lot</button>
+          <button id="admin-tab-telemetry" class="tab-btn">📊 Room Telemetry</button>
+        </div>
+
+        <!-- Admin Tab 1: Live Block & Up Next -->
+        <div id="admin-pane-stage" class="tab-pane active">
+          <div class="admin-grid-two-col">
+            <!-- Active Live Lot Card -->
+            <div class="admin-lot-card live-card">
+              <div class="lot-card-badge-row">
+                <span class="badge">ON THE BLOCK NOW</span>
+                <span class="live-pulse-dot"></span>
+              </div>
+              <h3 id="admin-live-title" class="admin-lot-name">Lot #101: 18th-Century Celestial Orrery</h3>
+              <div class="admin-stat-row">
+                <div class="admin-stat">
+                  <span class="stat-lbl">CURRENT HAMMER</span>
+                  <span id="admin-live-price" class="stat-val gold">$50.00</span>
+                </div>
+                <div class="admin-stat">
+                  <span class="stat-lbl">MIN INCREMENT</span>
+                  <span id="admin-live-increment" class="stat-val">+$5.00</span>
+                </div>
+              </div>
+              <div class="gavel-actions-row">
+                <button id="admin-strike-gavel-btn" class="admin-act-btn warn" title="Strike sounding block for attention">
+                  🔨 Strike Gavel
+                </button>
+                <button id="admin-extend-time-btn" class="admin-act-btn" title="Add 60 seconds to auction clock">
+                  ⏱️ +60s Extension
+                </button>
+                <button id="admin-hammer-down-btn" class="admin-act-btn danger" title="Conclude bidding and declare lot sold">
+                  🏆 Conclude &amp; Hammer Down
+                </button>
+              </div>
+            </div>
+
+            <!-- Designated Next Lot Card (USER'S EXPLICIT REQUIREMENT) -->
+            <div class="admin-lot-card next-card">
+              <div class="lot-card-badge-row">
+                <span class="badge next-badge">✨ DESIGNATED NEXT UP</span>
+                <span class="queue-status-tag">READY ON WINGS</span>
+              </div>
+              <h3 id="admin-next-title" class="admin-lot-name">Lot #102: 1962 Ferrari 250 GTO Scaglietti</h3>
+              <p id="admin-next-desc" class="admin-lot-desc">
+                Chassis #3413GT in Rosso Corsa. 3.0-liter Tipo 168/62 Colombo V12 engine.
+              </p>
+              <div class="admin-stat-row">
+                <div class="admin-stat">
+                  <span class="stat-lbl">ESTIMATE</span>
+                  <span id="admin-next-estimate" class="stat-val gold">$45,000,000</span>
+                </div>
+                <div class="admin-stat">
+                  <span class="stat-lbl">OPENING ASK</span>
+                  <span id="admin-next-start" class="stat-val">$10,000,000</span>
+                </div>
+              </div>
+              <button id="admin-launch-next-btn" class="admin-launch-btn">
+                🚀 LAUNCH LOT TO AUCTION BLOCK NOW ➔
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Tab 2: Catalog & Queue Selection -->
+        <div id="admin-pane-catalog" class="tab-pane">
+          <div class="catalog-table-header-row">
+            <p class="tab-desc">Browse inventory and designate which lot takes the block next:</p>
+            <span class="catalog-hint">Click "⭐ Set as Next" to cue item</span>
+          </div>
+          <div class="catalog-list" id="admin-catalog-list">
+            <!-- Populated dynamically with items and status -->
+          </div>
+        </div>
+
+        <!-- Admin Tab 3: Create New Lot -->
+        <div id="admin-pane-create" class="tab-pane">
+          <form id="create-lot-form" class="modal-form" onsubmit="return false;">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="new-lot-number">Lot Number</label>
+                <input type="text" id="new-lot-number" class="form-input" placeholder="e.g. 106" required />
+              </div>
+              <div class="form-group">
+                <label for="new-lot-category">Category</label>
+                <select id="new-lot-category" class="form-input select-input">
+                  <option value="Fine Art">Fine Art &amp; Masters</option>
+                  <option value="Haute Horlogerie">Haute Horlogerie &amp; Timepieces</option>
+                  <option value="Collector Automobiles">Collector Automobiles</option>
+                  <option value="Scientific Antiquities">Scientific Antiquities</option>
+                  <option value="Imperial Chinese Art">Imperial Chinese Art</option>
+                  <option value="High Jewelry">High Jewelry &amp; Gemstones</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-lot-title">Lot Title</label>
+              <input type="text" id="new-lot-title" class="form-input" placeholder="e.g. 1954 Rolex Submariner Ref. 6204" required />
+            </div>
+
+            <div class="form-group">
+              <label for="new-lot-desc">Catalog Provenance &amp; Description</label>
+              <textarea id="new-lot-desc" class="form-input textarea-input" rows="3" placeholder="Historical background, provenance, and condition report..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="new-lot-start">Opening Bid ($)</label>
+                <input type="number" id="new-lot-start" class="form-input" placeholder="50000" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="new-lot-inc">Min Increment ($)</label>
+                <input type="number" id="new-lot-inc" class="form-input" placeholder="2500" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="new-lot-duration">Duration (Seconds)</label>
+                <input type="number" id="new-lot-duration" class="form-input" placeholder="900" min="60" required />
+              </div>
+            </div>
+
+            <div id="create-lot-feedback" class="form-feedback hidden"></div>
+            <button type="submit" id="create-lot-submit-btn" class="modal-submit-btn">
+              AUTHENTICATE LOT &amp; ADD TO CATALOG ➔
+            </button>
+          </form>
+        </div>
+
+        <!-- Admin Tab 4: Room Telemetry -->
+        <div id="admin-pane-telemetry" class="tab-pane">
+          <div class="telemetry-grid">
+            <div class="telemetry-card">
+              <span class="telemetry-lbl">TOTAL AUCTIONS</span>
+              <span id="tele-total-auctions" class="telemetry-val">0</span>
+            </div>
+            <div class="telemetry-card">
+              <span class="telemetry-lbl">TOTAL ACCEPTED BIDS</span>
+              <span id="tele-accepted-bids" class="telemetry-val gold">0</span>
+            </div>
+            <div class="telemetry-card">
+              <span class="telemetry-lbl">REGISTERED VIP BIDDERS</span>
+              <span id="tele-bidders-count" class="telemetry-val">0</span>
+            </div>
+            <div class="telemetry-card">
+              <span class="telemetry-lbl">CONCURRENCY CORE</span>
+              <span class="telemetry-val" style="color: var(--success-emerald)">FOR UPDATE</span>
+            </div>
+          </div>
+          <div class="telemetry-details">
+            <div class="tele-item"><span>Gapless Sequence Engine:</span><strong>Active (Clock Timestamp)</strong></div>
+            <div class="tele-item"><span>Database Event Bus:</span><strong>PostgreSQL LISTEN / NOTIFY</strong></div>
+            <div class="tele-item"><span>WebSocket Reconnect Protocol:</span><strong>Gap Replay &amp; Resync</strong></div>
+          </div>
+        </div>
+      </div>
+    <!-- Server & Connection Settings Modal -->
+    <div id="server-modal" class="modal-backdrop hidden">
+      <div class="modal-card luxury-gold server-modal-card">
+        <div class="modal-header">
+          <div class="modal-header-titles">
+            <span class="modal-kicker">NETWORK ARCHITECTURE</span>
+            <h2 class="modal-title">Auction Engine &amp; Connectivity</h2>
+          </div>
+          <button id="server-modal-close" class="modal-close-btn" aria-label="Close modal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="server-status-banner" id="server-status-banner">
+            <div class="status-indicator-icon" id="server-status-indicator">✨</div>
+            <div class="server-status-text">
+              <h4 id="server-status-mode-title">Saleroom Interactive Standalone Engine</h4>
+              <p id="server-status-mode-desc">
+                Running in zero-latency client simulation mode. Full 3D room, articulated bidders, mechanical odometer, sound synthesis, and Curator Deck are fully operational.
+              </p>
+            </div>
+          </div>
+
+          <div class="server-config-section">
+            <label for="custom-server-input" class="server-input-label">
+              AWS EC2 or Custom Backend Host
+            </label>
+            <div class="server-input-row">
+              <input
+                type="text"
+                id="custom-server-input"
+                class="form-input"
+                placeholder="e.g. http://13.235.xxx.xxx:3000 or http://localhost:3000"
+              />
+              <button type="button" id="test-server-btn" class="ctrl-btn view-btn">Test</button>
+            </div>
+            <p class="server-input-hint">
+              Enter your AWS Fastify + WebSocket host to connect to multi-client synchronized PostgreSQL engine. Leave blank for zero-latency interactive demo.
+            </p>
+            <div id="server-test-feedback" class="form-feedback hidden"></div>
+          </div>
+
+          <div class="server-actions-row">
+            <button type="button" id="save-server-btn" class="modal-submit-btn">
+              ⚡ CONNECT TO BACKEND
+            </button>
+            <button type="button" id="reset-demo-btn" class="cat-action-btn secondary-btn" style="width: 100%; margin-top: 8px;">
+              ✨ SWITCH TO STANDALONE DEMO
+            </button>
+          </div>
+
+          <div class="server-options-grid" style="margin-top: 18px;">
+            <div class="server-opt-card">
+              <div class="opt-text-col">
+                <span class="opt-title">AI Opponent Floor Bidders</span>
+                <span class="opt-desc">Simulate realistic floor &amp; telephone bids across Sohum's saleroom seats</span>
+              </div>
+              <button type="button" id="toggle-ai-bidders-btn" class="ctrl-btn view-btn active">
+                Floor Bidders: ON
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

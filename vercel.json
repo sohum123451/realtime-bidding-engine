@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm --workspace=client run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

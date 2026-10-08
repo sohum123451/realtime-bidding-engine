@@ -14,6 +14,12 @@ export default defineConfig({
       '/auth': {
         target: 'http://localhost:3000',
       },
+      '/admin': {
+        target: 'http://localhost:3000',
+      },
+      '/health': {
+        target: 'http://localhost:3000',
+      },
     },
   },
 });

@@ -11,6 +11,51 @@ export interface Auction {
   min_increment_cents: number;
   version: number;
   seq: number;
+  item_id?: string | null;
+}
+
+export type UserRole = 'bidder' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  paddle_number: string;
+  avatar_color: string;
+  seat_index: number;
+  balance_cents: number;
+  created_at: string;
+}
+
+export type ItemStatus = 'catalog' | 'queued' | 'live' | 'sold' | 'passed';
+
+export interface Item {
+  id: string;
+  lot_number: string;
+  title: string;
+  description: string;
+  category: string;
+  estimated_price_cents: number;
+  starting_price_cents: number;
+  reserve_price_cents: number;
+  min_increment_cents: number;
+  duration_seconds: number;
+  image_url: string | null;
+  is_next: boolean;
+  status: ItemStatus;
+  created_at: string;
+}
+
+export interface TokenPayload {
+  userId: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  paddleNumber: string;
+  seatIndex: number;
+  avatarColor: string;
+  bidderId: string;
 }
 
 export interface Bid {

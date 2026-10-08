@@ -106,7 +106,7 @@ interface AuctioneerFigure {
   gavelTimer: number;
 }
 
-// Procedural Canvas Texture: Authentic Christie's / Sotheby's Auction Paddle
+// Procedural Canvas Texture: Authentic Sohum Auction Paddle
 function createPaddleTexture(paddleNum: string, colorHex: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
@@ -131,12 +131,12 @@ function createPaddleTexture(paddleNum: string, colorHex: string): THREE.CanvasT
   ctx.arc(128, 128, 110, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Header: SOTHEBY'S
+  // Header: SOHUM'S
   ctx.fillStyle = '#5c4a3b';
   ctx.font = 'bold 15px "Cinzel", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText("SOTHEBY'S", 128, 52);
+  ctx.fillText("SOHUM'S", 128, 52);
 
   // Bold Paddle Number
   ctx.fillStyle = '#141210';
@@ -324,22 +324,17 @@ function createToteBoardHeaderTexture(): THREE.CanvasTexture {
   ctx.lineWidth = 3;
   ctx.strokeRect(8, 8, 624, 124);
 
-  // Sotheby's & Christie's logo
+  // Sohum's Saleroom logo
   ctx.fillStyle = '#f0d38d';
-  ctx.font = 'bold 22px "Cinzel", Georgia, serif';
+  ctx.font = 'bold 24px "Cinzel", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText("CHRISTIE'S • SOTHEBY'S LONDON", 320, 42);
+  ctx.fillText("SOHUM'S SALEROOM • LONDON", 320, 52);
 
   // Subheader
-  ctx.fillStyle = '#beb19f';
-  ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText("LOT #101 : 18TH-CENTURY CELESTIAL ORRERY", 320, 80);
-
-  // Status line
-  ctx.fillStyle = '#ffd700';
-  ctx.font = 'bold 13px "JetBrains Mono", monospace';
-  ctx.fillText("LIVE REAL-TIME SALEROOM TOTE BOARD", 320, 112);
+  ctx.fillStyle = '#d4af37';
+  ctx.font = '600 16px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText("LOT #101 : 18TH-CENTURY CELESTIAL ORRERY", 320, 92);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
@@ -546,7 +541,7 @@ export class AuctionRoomScene {
     // 2. Center Aisle Royal Crimson Velvet Runner Carpet
     const carpetGeom = new THREE.PlaneGeometry(4.2, 24);
     const carpetMat = new THREE.MeshStandardMaterial({
-      color: 0x7c151c, // Sotheby's Royal Crimson
+      color: 0x7c151c, // Sohum Royal Crimson
       roughness: 0.88,
       metalness: 0.05,
     });
@@ -843,7 +838,7 @@ export class AuctionRoomScene {
     valance.position.set(0, 8.8, -11.5);
     this.scene.add(valance);
 
-    // 3. Stage Tote Board Header (Christie's / Sotheby's)
+    // 3. Stage Tote Board Header (Sohum Saleroom)
     const headerTex = createToteBoardHeaderTexture();
     const headerMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(6.4, 1.4),
@@ -1134,10 +1129,7 @@ export class AuctionRoomScene {
   }
 
   // --- SEATED HUMAN BIDDERS WITH ANIMATED PADDLES ---
-  private buildHumanBidders(): void {
-    // 6 VIP Bidder stations arranged in two tiered rows facing the stage!
-    // Row 1 (front row, 3 stations): Alice (left), Bob (center), Claire (right)
-    // Row 2 (back row, 3 stations): David (left), Elena (center), Felix (right)
+  public getSeatCoordinate(index: number): { x: number; z: number; rotY: number } {
     const seatCoordinates = [
       { x: -3.4, z: -3.2, rotY: 0.2 },   // Alice (Seat 1)
       { x: 0.0,  z: -3.6, rotY: 0.0 },   // Bob (Seat 2)
@@ -1145,11 +1137,30 @@ export class AuctionRoomScene {
       { x: -4.4, z: 1.4,  rotY: 0.25 },  // David (Seat 4)
       { x: 0.0,  z: 1.0,  rotY: 0.0 },   // Elena (Seat 5)
       { x: 4.4,  z: 1.4,  rotY: -0.25 }, // Felix (Seat 6)
+      { x: -5.4, z: 5.6,  rotY: 0.3 },   // VIP Table 7
+      { x: -1.8, z: 5.2,  rotY: 0.1 },   // VIP Table 8
+      { x: 1.8,  z: 5.2,  rotY: -0.1 },  // VIP Table 9
+      { x: 5.4,  z: 5.6,  rotY: -0.3 },  // VIP Table 10
+      { x: -6.0, z: 9.6,  rotY: 0.35 },  // VIP Table 11
+      { x: -2.0, z: 9.2,  rotY: 0.12 },  // VIP Table 12
+      { x: 2.0,  z: 9.2,  rotY: -0.12 }, // VIP Table 13
+      { x: 6.0,  z: 9.6,  rotY: -0.35 }, // VIP Table 14
     ];
 
-    for (let i = 0; i < BIDDER_SEATS.length; i++) {
-      const cfg = BIDDER_SEATS[i];
-      const coord = seatCoordinates[i];
+    if (index < seatCoordinates.length) {
+      return seatCoordinates[index];
+    }
+    const row = Math.floor(index / 4);
+    const col = index % 4;
+    const x = (col - 1.5) * 3.8;
+    const z = 4.0 + row * 4.0;
+    const rotY = -(x / 20);
+    return { x, z, rotY };
+  }
+
+  public addBidderStation(cfg: BidderSeatConfig): void {
+    const i = cfg.seatIndex;
+    const coord = this.getSeatCoordinate(i);
 
       const stationGroup = new THREE.Group();
       stationGroup.position.set(coord.x, 0, coord.z);
@@ -1395,10 +1406,22 @@ export class AuctionRoomScene {
         paddleRaiseTimer: 0,
         idlePhase: i * 1.05,
       });
+  }
+
+  private buildHumanBidders(): void {
+    for (let i = 0; i < BIDDER_SEATS.length; i++) {
+      this.addBidderStation(BIDDER_SEATS[i]);
     }
   }
 
-  // --- STAGE PHONE BIDDING BANK (SOTHEBY'S / CHRISTIE'S PHONE CLERKS) ---
+  public focusOnSeat(seatIndex: number): void {
+    const pos = this.getSeatPosition(seatIndex);
+    this.controls.target.set(pos.x, 1.6, pos.z);
+    this.camera.position.set(pos.x * 0.7, 3.8, pos.z + 4.2);
+  }
+
+
+  // --- STAGE PHONE BIDDING BANK (SOHUM'S PHONE CLERKS) ---
   private buildPhoneBank(): void {
     const group = new THREE.Group();
     group.position.set(-7.5, 0.45, -7.5);

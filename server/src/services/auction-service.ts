@@ -139,3 +139,150 @@ export async function closeAuctionIfExpired(auctionId: string): Promise<{
     client.release();
   }
 }
+
+export async function manuallyCloseAuction(auctionId: string): Promise<{
+  closed: boolean;
+  seq?: number;
+  finalPriceCents?: number;
+  winnerId?: string | null;
+}> {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const res = await client.query(
+      `SELECT id, status, ends_at, current_price_cents, current_winner_id, seq, version, now() as db_now
+       FROM auctions
+       WHERE id = $1 FOR UPDATE`,
+      [auctionId]
+    );
+
+    if (res.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { closed: false };
+    }
+
+    const auction = res.rows[0];
+    if (auction.status !== 'open') {
+      await client.query('COMMIT');
+      return { closed: false };
+    }
+
+    const nextSeq = Number(auction.seq) + 1;
+    const finalPrice = Number(auction.current_price_cents);
+    const winnerId = auction.current_winner_id;
+    const dbNow = new Date(auction.db_now);
+
+    await client.query(
+      `UPDATE auctions
+       SET status = 'closed', seq = seq + 1, version = version + 1
+       WHERE id = $1`,
+      [auctionId]
+    );
+
+    await client.query(
+      `INSERT INTO events (auction_id, seq, type, payload, created_at)
+       VALUES ($1, $2, 'auction_closed', $3, clock_timestamp())`,
+      [
+        auctionId,
+        nextSeq,
+        JSON.stringify({
+          final_price_cents: finalPrice,
+          winner_id: winnerId,
+          closed_at: dbNow.toISOString(),
+          reason: 'curator_hammer_down',
+        }),
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      closed: true,
+      seq: nextSeq,
+      finalPriceCents: finalPrice,
+      winnerId,
+    };
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // ignore
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function extendAuction(
+  auctionId: string,
+  extensionSeconds: number = 60
+): Promise<{ extended: boolean; endsAt?: string; seq?: number }> {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const res = await client.query(
+      `SELECT id, status, ends_at, current_price_cents, seq, now() as db_now
+       FROM auctions
+       WHERE id = $1 FOR UPDATE`,
+      [auctionId]
+    );
+
+    if (res.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { extended: false };
+    }
+
+    const auction = res.rows[0];
+    if (auction.status !== 'open') {
+      await client.query('COMMIT');
+      return { extended: false };
+    }
+
+    const currentEndsAt = new Date(auction.ends_at);
+    const dbNow = new Date(auction.db_now);
+    const baseTime = currentEndsAt > dbNow ? currentEndsAt : dbNow;
+    const newEndsAt = new Date(baseTime.getTime() + extensionSeconds * 1000);
+    const nextSeq = Number(auction.seq) + 1;
+
+    await client.query(
+      `UPDATE auctions
+       SET ends_at = $1, seq = seq + 1, version = version + 1
+       WHERE id = $2`,
+      [newEndsAt.toISOString(), auctionId]
+    );
+
+    await client.query(
+      `INSERT INTO events (auction_id, seq, type, payload, created_at)
+       VALUES ($1, $2, 'timer_extended', $3, clock_timestamp())`,
+      [
+        auctionId,
+        nextSeq,
+        JSON.stringify({
+          ends_at: newEndsAt.toISOString(),
+          extension_seconds: extensionSeconds,
+          reason: 'admin_time_extension',
+        }),
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      extended: true,
+      endsAt: newEndsAt.toISOString(),
+      seq: nextSeq,
+    };
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // ignore
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}

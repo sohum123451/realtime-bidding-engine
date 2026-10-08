@@ -72,7 +72,9 @@ export async function placeBid(
       rejectReason = 'auction_ended';
     } else if (dbNow < startsAt) {
       rejectReason = 'auction_not_started';
-    } else if (amountCents <= currentPriceCents + minIncrementCents) {
+    } else if (auction.current_winner_id && auction.current_winner_id === bidderId) {
+      rejectReason = 'already_highest_bidder';
+    } else if (amountCents < currentPriceCents + minIncrementCents) {
       rejectReason = 'too_low';
     }
 
@@ -101,15 +103,9 @@ export async function placeBid(
       };
     }
 
-    // 4. Bid Accepted: Check Anti-sniping
-    // A bid accepted in the last 30s extends ends_at by 30s
-    let newEndsAt = endsAt;
-    let isExtended = false;
-    const remainingTimeMs = endsAt.getTime() - dbNow.getTime();
-    if (remainingTimeMs <= 30000) {
-      newEndsAt = new Date(endsAt.getTime() + 30000);
-      isExtended = true;
-    }
+    // 4. Bid Accepted: No automatic anti-sniping extension
+    const newEndsAt = endsAt;
+    const isExtended = false;
 
     // Update auction
     const updateRes = await client.query(

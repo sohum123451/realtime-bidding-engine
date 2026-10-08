@@ -5,6 +5,9 @@ import { closingScheduler } from './services/closing-scheduler.js';
 import { buildApp } from './http/app.js';
 import { AuctionWebSocketServer } from './ws/server.js';
 
+import { seedDefaultUsers } from './services/user-service.js';
+import { seedDefaultCatalog } from './services/catalog-service.js';
+
 export interface ServerOptions {
   port?: number;
   host?: string;
@@ -16,8 +19,10 @@ export async function startServer(options: ServerOptions = {}) {
   const HOST = options.host ?? process.env.HOST ?? '127.0.0.1';
   const closePool = options.closePoolOnShutdown ?? true;
 
-  // 1. Run database migrations
+  // 1. Run database migrations and seed default data
   await runMigrations();
+  await seedDefaultUsers();
+  await seedDefaultCatalog();
 
   // 2. Start Postgres LISTEN/NOTIFY event bus
   await eventBus.start();

@@ -228,7 +228,7 @@ export async function seedDefaultCatalog(): Promise<void> {
       startingPriceCents: 5000,    // $50.00
       reservePriceCents: 1500000,
       minIncrementCents: 500,     // $5.00
-      durationSeconds: 1500,      // 25 mins
+      durationSeconds: 90,       // 90s fast demo tempo
       imageUrl: '/assets/orrery.jpg',
       status: 'live' as const,
       isNext: false,

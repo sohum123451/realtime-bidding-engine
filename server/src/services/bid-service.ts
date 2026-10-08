@@ -106,9 +106,14 @@ export async function placeBid(
       };
     }
 
-    // 4. Bid Accepted: No automatic anti-sniping extension
-    const newEndsAt = endsAt;
-    const isExtended = false;
+    // 4. Bid Accepted: Anti-sniping (+10 seconds if <= 10s remaining)
+    let newEndsAt = endsAt;
+    let isExtended = false;
+    const remainingTimeMs = endsAt.getTime() - dbNow.getTime();
+    if (remainingTimeMs <= 10000) {
+      newEndsAt = new Date(endsAt.getTime() + 10000);
+      isExtended = true;
+    }
 
     // Update auction
     const updateRes = await client.query(

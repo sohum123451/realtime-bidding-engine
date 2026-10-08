@@ -104,6 +104,30 @@ body, html {
   color: #ff8c7e;
 }
 
+.timer-badge {
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #ffd700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.timer-badge.urgent {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: #ef4444;
+  color: #ff6b6b;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  animation: timerPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulse {
+  from { opacity: 0.85; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.05); }
+}
+
 .seq-badge {
   padding: 3px 8px;
   background: rgba(255, 255, 255, 0.05);

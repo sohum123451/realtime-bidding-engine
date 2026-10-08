@@ -43,6 +43,7 @@ const lotTitleEl = document.getElementById('lot-title')!;
 const auctionIdEl = document.getElementById('auction-id-display')!;
 const seqCounterEl = document.getElementById('seq-counter')!;
 const auctionStatusEl = document.getElementById('auction-status')!;
+const auctionTimerBadgeEl = document.getElementById('auction-timer-badge')!;
 const connectionPillEl = document.getElementById('connection-pill')!;
 const statusLabelEl = document.getElementById('status-label')!;
 const reconnectBannerEl = document.getElementById('reconnect-banner')!;
@@ -428,7 +429,8 @@ network = new AuctionNetworkClient({
             'accepted',
             ev.seq,
             bidder ? bidder.name : ev.payload.bidder_id,
-            ev.payload.amount_cents
+            ev.payload.amount_cents,
+            ev.payload.extended ? '+10s' : undefined
           );
         } else if (ev.type === 'auction_closed') {
           addFeedItem('closed', ev.seq, 'AUCTION CONCLUDED', ev.payload.final_price_cents);
@@ -462,11 +464,19 @@ network = new AuctionNetworkClient({
       // 3D shockwave pulse from winner seat
       scene.triggerAcceptedBid(seatIndex, color);
 
+      // Anti-sniping visual extension (+10s added!)
+      if (ev.payload.extended) {
+        scene.triggerAntiSnipeExtension();
+        sounds.playAntiSnipingAlert();
+        showToast('ANTI-SNIPING EXTENSION: +10 SECONDS ADDED', 'extended');
+      }
+
       addFeedItem(
         'accepted',
         ev.seq,
         winner ? winner.name : ev.payload.bidder_id,
-        ev.payload.amount_cents
+        ev.payload.amount_cents,
+        ev.payload.extended ? '+10s' : undefined
       );
 
       updateBidHint();
@@ -1099,7 +1109,34 @@ function updateCountdown() {
   if (!auctionEndsAt) return;
   const now = Date.now();
   const diff = Math.max(0, auctionEndsAt.getTime() - now);
-  scene.setCountdown(diff, 25 * 60 * 1000); // 25-minute scale
+
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  if (auctionTimerBadgeEl) {
+    auctionTimerBadgeEl.textContent = `⏱️ ${timeStr}`;
+    if (diff <= 10000 && diff > 0 && auctionStatus === 'open') {
+      auctionTimerBadgeEl.className = 'badge timer-badge urgent';
+    } else {
+      auctionTimerBadgeEl.className = 'badge timer-badge';
+    }
+  }
+  scene.setCountdown(diff, 90 * 1000); // 90-second scale
+
+  // Automatic hammer down when timer hits 0
+  if (diff <= 0 && auctionStatus === 'open') {
+    auctionStatus = 'closed';
+    auctionStatusEl.textContent = 'HAMMER DOWN';
+    auctionStatusEl.className = 'badge closed';
+    if (auctionTimerBadgeEl) {
+      auctionTimerBadgeEl.textContent = '⏱️ 00:00';
+      auctionTimerBadgeEl.className = 'badge timer-badge';
+    }
+    btnSubmitBid.disabled = true;
+    sounds.playGavelTriple();
+    showToast('AUCTION CONCLUDED: LOT HAMMERED DOWN!', 'info');
+    updateSubmitButtonLabel();
+  }
 }
 
 function animate(now: number) {

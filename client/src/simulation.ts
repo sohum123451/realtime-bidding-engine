@@ -36,7 +36,7 @@ class SimulationEngine {
       starting_price_cents: 5000,
       estimated_price_cents: 18000000,
       min_increment_cents: 500,
-      duration_seconds: 1500,
+      duration_seconds: 90,
       status: 'live',
       is_next: false,
     },
@@ -155,7 +155,7 @@ class SimulationEngine {
     current_price_cents: 5000,
     min_increment_cents: 500,
     status: 'open',
-    ends_at: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+    ends_at: new Date(Date.now() + 90 * 1000).toISOString(),
     created_at: new Date().toISOString(),
   };
 
@@ -170,6 +170,7 @@ class SimulationEngine {
 
   constructor() {
     this.scheduleNextAiBid();
+    this.startExpirationChecker();
   }
 
   public getSnapshot() {
@@ -281,8 +282,13 @@ class SimulationEngine {
     this.activeAuction.current_winner_id = winningBidderId;
     this.activeAuction.current_winner_name = winningBidderName;
 
-    // No automatic anti-sniping extension
-    const extended = false;
+    // Anti-sniping: extend timer by +10s if <= 10s remaining
+    const remainingMs = new Date(this.activeAuction.ends_at).getTime() - Date.now();
+    let extended = false;
+    if (remainingMs <= 10000 && this.activeAuction.status === 'open') {
+      this.activeAuction.ends_at = new Date(Date.now() + 10000).toISOString();
+      extended = true;
+    }
 
     const eventPayload = {
       auction_id: this.activeAuction.id,
@@ -329,7 +335,7 @@ class SimulationEngine {
   // Autonomous Opponent Saleroom Bidders
   private scheduleNextAiBid() {
     if (this.aiBidTimer) clearTimeout(this.aiBidTimer);
-    const delay = 18000 + Math.random() * 20000; // 18 - 38 seconds
+    const delay = 3500 + Math.random() * 3500; // Fast dynamic counter-bids: 3.5s - 7s
     this.aiBidTimer = setTimeout(() => {
       this.triggerAutonomousOpponentBid();
       this.scheduleNextAiBid();
@@ -364,7 +370,13 @@ class SimulationEngine {
     this.activeAuction.current_winner_id = opponentSeat.id;
     this.activeAuction.current_winner_name = opponentSeat.name;
 
-    const extended = false;
+    // Anti-sniping: extend timer by +10s if <= 10s remaining
+    const remainingMs = new Date(this.activeAuction.ends_at).getTime() - Date.now();
+    let extended = false;
+    if (remainingMs <= 10000 && this.activeAuction.status === 'open') {
+      this.activeAuction.ends_at = new Date(Date.now() + 10000).toISOString();
+      extended = true;
+    }
 
     const eventPayload = {
       auction_id: this.activeAuction.id,
@@ -391,6 +403,32 @@ class SimulationEngine {
     if (this.recentEvents.length > 50) this.recentEvents.pop();
 
     this.activeCallbacks.onEvent(eventMsg);
+  }
+
+  // Automatic Lot Hammer-down when 90s countdown concludes
+  private startExpirationChecker() {
+    setInterval(() => {
+      if (this.activeAuction && this.activeAuction.status === 'open') {
+        const remaining = new Date(this.activeAuction.ends_at).getTime() - Date.now();
+        if (remaining <= 0) {
+          this.activeAuction.status = 'closed';
+          this.currentSeq++;
+          const closeEvent = {
+            type: 'event',
+            event_type: 'auction_closed',
+            seq: this.currentSeq,
+            payload: {
+              auction_id: this.activeAuction.id,
+              final_price_cents: this.activeAuction.current_price_cents,
+              winner_id: this.activeAuction.current_winner_id,
+              winner_name: this.activeAuction.current_winner_name,
+            },
+          };
+          this.recentEvents.unshift(closeEvent);
+          this.activeCallbacks?.onEvent(closeEvent);
+        }
+      }
+    }, 500);
   }
 
   // Handle all simulated REST endpoints

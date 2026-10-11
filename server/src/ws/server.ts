@@ -75,12 +75,15 @@ export class AuctionWebSocketServer {
       }
     });
 
-    ws.on('close', () => {
+    console.log(`[WS] Client connected: bidderId=${ws.bidderId}`);
+
+    ws.on('close', (code, reason) => {
+      console.log(`[WS] Client disconnected: code=${code}, reason=${reason ? reason.toString() : 'none'}`);
       this.cleanupSocket(ws);
     });
 
     ws.on('error', (err) => {
-      console.warn('WebSocket client error:', err.message);
+      console.warn('[WS] Client error:', err.message);
       this.cleanupSocket(ws);
     });
   }

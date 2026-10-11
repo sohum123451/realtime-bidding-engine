@@ -558,6 +558,9 @@ async function fetchBidderTokens() {
 
 // 8. Bootstrap Auction Connection
 async function bootstrap() {
+  if (!window.location.hostname.endsWith('vercel.app')) {
+    localStorage.removeItem('force_demo_mode');
+  }
   renderSeatButtons();
   renderEmptyFeedHint();
   await fetchBidderTokens();

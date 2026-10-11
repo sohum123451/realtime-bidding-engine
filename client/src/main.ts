@@ -1223,13 +1223,13 @@ function setupServerModal() {
   // Save Server Button
   saveServerBtn?.addEventListener('click', async () => {
     const val = customServerInput.value.trim();
+    setForcedDemoMode(false);
     if (val) {
       setCustomServerUrl(val);
       showToast(`Custom backend configured: ${val}`, 'info');
     } else {
       setCustomServerUrl(null);
-      setForcedDemoMode(true);
-      showToast('Switched to Standalone Saleroom Demo', 'info');
+      showToast('Connected to Host Live Backend', 'info');
     }
     serverModalEl.classList.add('hidden');
     await bootstrap();

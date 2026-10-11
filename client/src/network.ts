@@ -183,14 +183,17 @@ export class AuctionNetworkClient {
 
     this.initSocket();
 
-    // Fallback safety: If remote backend doesn't connect within 2.5s, switch to simulation
+    // Fallback safety: If on static Vercel (no backend attached), switch to simulation after 3s
+    const isVercel = window.location.hostname.endsWith('vercel.app');
     if (this.fallbackTimeoutTimer) clearTimeout(this.fallbackTimeoutTimer);
-    this.fallbackTimeoutTimer = setTimeout(() => {
-      if (!this.isConnected && !this.isSimulating) {
-        console.info('[Network] Remote backend unreachable. Activating Saleroom Simulation Engine.');
-        this.activateSimulation();
-      }
-    }, 2500);
+    if (isVercel) {
+      this.fallbackTimeoutTimer = setTimeout(() => {
+        if (!this.isConnected && !this.isSimulating) {
+          console.info('[Network] Remote backend unreachable. Activating Saleroom Simulation Engine.');
+          this.activateSimulation();
+        }
+      }, 3000);
+    }
   }
 
   private activateSimulation(): void {

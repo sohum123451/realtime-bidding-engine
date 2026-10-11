@@ -54,7 +54,7 @@ export async function startServer(options: ServerOptions = {}) {
   return { app, wsServer, shutdown, port: PORT };
 }
 
-if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js')) {
+if (!process.env.VITEST) {
   startServer()
     .then(({ shutdown }) => {
       process.on('SIGINT', shutdown);
@@ -65,3 +65,4 @@ if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js
       process.exit(1);
     });
 }
+
